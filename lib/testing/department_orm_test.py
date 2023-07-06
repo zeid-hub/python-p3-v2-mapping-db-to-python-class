@@ -8,8 +8,7 @@ class TestDepartment:
 
     @pytest.fixture(autouse=True)
     def drop_tables(self):
-        '''drop tables prior to each test.'''
-        CURSOR.execute("DROP TABLE IF EXISTS employees")
+        '''drop table prior to each test.'''
         CURSOR.execute("DROP TABLE IF EXISTS departments")
 
     def test_creates_table(self):
