@@ -245,7 +245,7 @@ There are a couple important things to note here:
   type. This is typically performed with tuples to match the format that results
   are returned in. A tuple containing only one element must have a comma after
   that element, otherwise it is interpreted as a grouped statement (think
-  [PEMDAS]https://en.wikipedia.org/wiki/Order_of_operations).
+  [PEMDAS](https://en.wikipedia.org/wiki/Order_of_operations)).
 - The `fetchone()` method returns the first element from `fetchall()`.
 
 Let's try out this new method. Exit `ipdb` and run `python debug.py` again:
