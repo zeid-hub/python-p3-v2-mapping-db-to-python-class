@@ -164,9 +164,6 @@ To return all the departments in the database, we need to do the following:
 ```py
 class Department
 
-    # you don't need this, but default empty values can help you avoid errors later on
-    all = []
-
     # ... rest of methods
 
     @classmethod
@@ -340,8 +337,6 @@ from config import CURSOR, CONN
 
 
 class Department:
-
-    all = []
 
     def __init__(self, name, location, id=None):
         self.id = id
