@@ -13,6 +13,7 @@ class Department:
 
     @classmethod
     def create_table(cls):
+        """ Create a new table to persist the attributes of Department class instances """
         sql = """
             CREATE TABLE IF NOT EXISTS departments (
             id INTEGER PRIMARY KEY,
@@ -24,6 +25,7 @@ class Department:
 
     @classmethod
     def drop_table(cls):
+        """ Drop the table that persists Department class instances """
         sql = """
             DROP TABLE IF EXISTS departments;
         """
@@ -31,6 +33,8 @@ class Department:
         CONN.commit()
 
     def save(self):
+         """ Insert a new row with the name and location values of the current Department object.
+        Update object id attribute using the primary key value of new row"""
         sql = """
             INSERT INTO departments (name, location)
             VALUES (?, ?)
@@ -49,6 +53,7 @@ class Department:
         return department
 
     def update(self):
+        """Update the table row corresponding to the current Department object."""
         sql = """
             UPDATE departments
             SET name = ?, location = ?
@@ -58,6 +63,7 @@ class Department:
         CONN.commit()
 
     def delete(self):
+         """Delete the table row corresponding to the current Department class instance"""
         sql = """
             DELETE FROM departments
             WHERE id = ?
