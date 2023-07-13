@@ -1,9 +1,7 @@
 from __init__ import CURSOR, CONN
 
-class Department:
 
-    # Define a dictionary to store class instances for subsequent lookup when mapping a table row to a class instance.
-    all = {}
+class Department:
 
     def __init__(self, name, location, id=None):
         self.id = id
@@ -37,7 +35,7 @@ class Department:
     def save(self):
         """ Insert a new row with the name and location values of the current Department object.
         Update object id attribute using the primary key value of new row.
-        Save the object in local dictionary using table row's PK as dictionary key"""
+        """
         sql = """
             INSERT INTO departments (name, location)
             VALUES (?, ?)
@@ -47,7 +45,6 @@ class Department:
         CONN.commit()
 
         self.id = CURSOR.lastrowid
-        Department.all[self.id] = self
 
     @classmethod
     def create(cls, name, location):
@@ -67,8 +64,7 @@ class Department:
         CONN.commit()
 
     def delete(self):
-        """Delete the table row corresponding to the current Department class instance.
-        Remove the object from local dictionary."""
+        """Delete the table row corresponding to the current Department class instance"""
         sql = """
             DELETE FROM departments
             WHERE id = ?
@@ -76,5 +72,3 @@ class Department:
 
         CURSOR.execute(sql, (self.id,))
         CONN.commit()
-
-        del Department.all[self.id]

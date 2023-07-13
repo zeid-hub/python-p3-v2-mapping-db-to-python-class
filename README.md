@@ -29,8 +29,6 @@ implement the following methods:
 | find_by_id(cls, id))        | Department | Return a class instance corresponding to the table row specified by the primary key `id`   |
 | find_by_name(cls, name)     | Department | Return a class instance corresponding to the first table row matching the specified `name` |
 
----
-
 ## Code Along
 
 This lesson is a code-along, so fork and clone the repo.
@@ -95,6 +93,67 @@ ipdb> [row for row in departments]
 # => [(1, 'Payroll', 'Building A, 5th Floor'), (2, 'Human Resources', 'Building C, East Wing'), (3, 'Accounting', 'Building B, 1st Floor')]
 ```
 
+## Maintaining a dictionary of persisted `Department` instances
+
+Several of the methods we write in this lesson will query the "departments"
+table and return a `Department` class instance whose attributes are assigned to
+the row data. However, consider what happens if we query the table several times
+for the same row. For example, we may have 10 employees working for the same
+department. Within our Python application, we will have 10 `Employee` class
+instances that should all be associated with the same `Department` class
+instance. It is important that we avoid creating duplicate `Department` objects
+when mapping from the same "departments" table row.
+
+To solve this, we will cache (i.e. store) the `Department` instances that have
+been persisted to the database. We'll use a dictionary data structure, where
+each dictionary entry consists of a key and a value:
+
+- the key is the `id` attribute of the `Department` class instance.
+- the value is the `Department` class instance that has been saved to the
+  database.
+
+In later lessons we will use an ORM framework named **FLASK-SQLALCHEMY**, which
+manages the mapping between table rows and Python class instances, and
+alleviates the need to explicitly maintain a dictionary in our code.
+
+Let's update `Department` to add a class variable named `all` that will store
+`Department` instances in a dictionary:
+
+```py
+from __init__ import CURSOR, CONN
+
+
+class Department:
+
+    # Dictionary for mapping a table row to a persisted class instance.
+    all = {}
+
+    # existing methods ...
+```
+
+We'll also update the `save()` method to add the current `Department` instance
+to the dictionary, using the row's primary key as the dictionary key:
+
+```py
+    def save(self):
+        """ Insert a new row with the name and location values of the current Department object.
+        Update object id attribute using the primary key value of new row.
+        Save the object in local dictionary using table row's PK as dictionary key"""
+        sql = """
+            INSERT INTO departments (name, location)
+            VALUES (?, ?)
+        """
+
+        CURSOR.execute(sql, (self.name, self.location))
+        CONN.commit()
+
+        self.id = CURSOR.lastrowid
+        Department.all[self.id] = self
+```
+
+Now we can implement the necessary methods for mapping table rows to Python
+class instances.
+
 ---
 
 ## `instance_from_db()`
@@ -103,30 +162,29 @@ ipdb> [row for row in departments]
 | --------------------------- | ---------- | ------------------------------------------------------------------ |
 | instance_from_db (cls, row) | Department | Return a class instance having the attribute values in a table row |
 
-The first thing we need to do is map the data stored in a table row into a
-Python object.
+This method will map the data stored in a "deparments" table row into a
+`Department` object.
 
 One thing to know is that the database, SQLite in our case, will return a list
 of data for each row. For example, a row for the payroll department would look
 like this: `[1, "Payroll", "Building A, 5th Floor"]`. We use `row[0]` to get the
 department id `1` and `row[1]` to get the department name `"Payroll"`, etc.
 
-Add the new class method `instance_from_db(cls, row)` to the end of the
-`Department` class:
+Add the new class method `instance_from_db(cls, row)` to the `Department` class:
 
 ```py
-class Department
-
-    # ... rest of attributes and methods
-
     @classmethod
     def instance_from_db(cls, row):
         """Return a Department object having the attribute values from the table row."""
 
         # Check the dictionary for an existing class instance using the row's primary key
         department = Department.all.get(row[0])
-        # If not in dictionary, create a new class instance using the row data and add to dictionary
-        if department is None:
+        if department:
+            # ensure attributes match row values in case local object was modified
+            department.name = row[1]
+            department.location = row[2]
+        else:
+            # not in dictionary, create new class instance and add to dictionary
             department = cls(row[1], row[2])
             department.id = row[0]
             Department.all[department.id] = department
@@ -134,20 +192,23 @@ class Department
 ```
 
 The `instance_from_db` method takes a reference to a Python class `cls` and a
-list storing the column values from a table row `row`, and returns an instance
-of the class using the attribute values from the table row data. The method
+list named `row` that stores the column values from a table row. The method
 looks in the dictionary for an existing class instance using the primary key
-`id` as the dictionary key. If there isn't an entry, the method will create a
-new class instance and add it to the dictionary. In general the dictionary
-**should** contain the corresponding class instance since we add to the
-dictionary each time we persist an object using the `save()` method, and we
-should not need to create a new instance and add to the dictionary. However, it
-is possible that the table may contain a row inserted directly using an SQL
-statement rather than the `save()` method, so we'll handle that case with the
-conditional statement.
+`id` as the dictionary key, and updates the attribute values to match the row
+data. However, it is possible that the database table may contain a row that
+does not correspond to a dictionary entry, in which case the method creates a
+new class instance and adds it to the dictionary.
 
-Let's run `python lib/debug.py` to create the table with initial values. We'll
-execute a query to get a row of data, then use that row to get a Python
+Type `exit()` to terminate the debugging session, then rerun
+`python lib/debug.py` to create the table with initial values. We can list the
+dictionary of persisted objects:
+
+```py
+ipdb> Department.all
+{1: <Department 1: Payroll, Building A, 5th Floor>, 2: <Department 2: Human Resources, Building C, East Wing>, 3: <Department 3: Accounting, Building B, 1st Floor>}
+```
+
+Execute a query to get a row of data, then use that row to get a Python
 Department object:
 
 ```py
@@ -176,14 +237,12 @@ To return all the departments in the database, we need to do the following:
 3. iterate over each row and call `instance_from_db()` with each row in the
    query result to retrieve a Python object from the row data:
 
+Add the new class method `get_all()` to the `Department` class:
+
 ```py
-class Department
-
-    # ... rest of methods
-
     @classmethod
     def get_all(cls):
-        """Return a list of class instances corresponding to each row in the table"""
+        """Return a list containing a Department object per row in the table"""
         sql = """
             SELECT *
             FROM departments
@@ -197,7 +256,8 @@ class Department
 With this method in place, let's try calling the `get_all()` method to access
 all the departments in the database.
 
-Run `python lib/debug.py`, and then follow along in the `ipdb` session:
+Exit `ipdb` and run python
+` lib/debug.py`` again and follow along in the  `ipdb` session:
 
 ```py
 ipdb> Department.get_all()
@@ -231,10 +291,6 @@ passed in, and we include `id` in a tuple as the second argument to the
 `execute()` method:
 
 ```py
-class Department:
-
-    # ... rest of methods
-
     @classmethod
     def find_by_id(cls, id):
         """Return a Department object corresponding to the table row matching the specified primary key"""
@@ -281,10 +337,6 @@ The `find_by_name()` method is similar to `find_by_id()`, but we will limit the
 result to the first row matching the specified name.
 
 ```py
-class Department:
-
-    # ... rest of methods
-
     @classmethod
     def find_by_name(cls, name):
         """Return a Department object corresponding to first table row matching specified name"""
@@ -328,7 +380,10 @@ code-along assignment using `git`.
 
 In the previous lesson, we have created a database and persisted Python objects
 to the database. In this lesson, we saw how to map data stored in the database
-into Python objects.
+into Python objects. We cached Python objects using a dictionary to ensure a row
+maps to the same Python object each time it is retrieved using a query.
+Eventually, we will learn how to use an ORM framework that manages this mapping
+for us.
 
 We haven't covered every use case, but we have a functioning ORM for a single
 Python class!
@@ -343,9 +398,10 @@ class instances.
 ```py
 from __init__ import CURSOR, CONN
 
+
 class Department:
 
-    # Define a dictionary to store class instances for subsequent lookup when mapping a table row to a class instance.
+    # Dictionary for mapping a table row to a persisted class instance.
     all = {}
 
     def __init__(self, name, location, id=None):
@@ -410,8 +466,7 @@ class Department:
         CONN.commit()
 
     def delete(self):
-        """Delete the table row corresponding to the current Department class instance.
-        Remove the object from local dictionary."""
+        """Delete the table row corresponding to the current Department class instance"""
         sql = """
             DELETE FROM departments
             WHERE id = ?
@@ -420,16 +475,18 @@ class Department:
         CURSOR.execute(sql, (self.id,))
         CONN.commit()
 
-        del Department.all[self.id]
-
     @classmethod
     def instance_from_db(cls, row):
         """Return a Department object having the attribute values from the table row."""
 
         # Check the dictionary for an existing class instance using the row's primary key
         department = Department.all.get(row[0])
-        # If not in dictionary, create a new class instance using the row data and add to dictionary
-        if department is None:
+        if department:
+            # ensure attributes match row values in case local object was modified
+            department.name = row[1]
+            department.location = row[2]
+        else:
+            # not in dictionary, create new class instance and add to dictionary
             department = cls(row[1], row[2])
             department.id = row[0]
             Department.all[department.id] = department
@@ -437,7 +494,7 @@ class Department:
 
     @classmethod
     def get_all(cls):
-        """Return a list containing a Department object corresponding to each row in the table"""
+        """Return a list containing a Department object per row in the table"""
         sql = """
             SELECT *
             FROM departments
@@ -470,6 +527,7 @@ class Department:
 
         row = CURSOR.execute(sql, (name,)).fetchone()
         return cls.instance_from_db(row) if row else None
+
 ```
 
 ## Resources
