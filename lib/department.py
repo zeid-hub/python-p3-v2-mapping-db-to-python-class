@@ -1,4 +1,4 @@
-from config import CURSOR, CONN
+from __init__ import CURSOR, CONN
 
 
 class Department:
@@ -33,8 +33,9 @@ class Department:
         CONN.commit()
 
     def save(self):
-         """ Insert a new row with the name and location values of the current Department object.
-        Update object id attribute using the primary key value of new row"""
+        """ Insert a new row with the name and location values of the current Department object.
+        Update object id attribute using the primary key value of new row.
+        """
         sql = """
             INSERT INTO departments (name, location)
             VALUES (?, ?)
@@ -63,7 +64,7 @@ class Department:
         CONN.commit()
 
     def delete(self):
-         """Delete the table row corresponding to the current Department class instance"""
+        """Delete the table row corresponding to the current Department class instance"""
         sql = """
             DELETE FROM departments
             WHERE id = ?

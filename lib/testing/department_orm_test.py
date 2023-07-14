@@ -1,5 +1,5 @@
+from __init__ import CONN, CURSOR
 from department import Department
-from config import CURSOR, CONN
 import pytest
 
 
@@ -8,8 +8,11 @@ class TestDepartment:
 
     @pytest.fixture(autouse=True)
     def drop_tables(self):
-        '''drop table prior to each test.'''
+        '''drop tables prior to each test.'''
+
+        CURSOR.execute("DROP TABLE IF EXISTS employees")
         CURSOR.execute("DROP TABLE IF EXISTS departments")
+        Department.all = {}
 
     def test_creates_table(self):
         '''contains method "create_table()" that creates table "departments" if it does not exist.'''
@@ -97,7 +100,7 @@ class TestDepartment:
                 == (id2, "Sales and Marketing", "Building B, 4th Floor")
                 == (department2.id, department2.name, department2.location))
 
-    def test_deletes_record(self):
+    def test_deletes_row(self):
         '''contains a method "delete()" that deletes the instance's corresponding db row'''
         Department.create_table()
 
@@ -122,8 +125,8 @@ class TestDepartment:
         assert ((id2, "Sales and Marketing", "Building B, 4th Floor")
                 == (department2.id, department2.name, department2.location))
 
-    def test_creates_new_instance_from_db(self):
-        '''contains method "new_from_db()" that takes a table row and creates a Department instance.'''
+    def test_instance_from_db(self):
+        '''contains method "instance_from_db()" that takes a table row and returns a Department instance.'''
 
         Department.create_table()
         Department.create("Payroll", "Building A, 5th Floor")
@@ -132,7 +135,7 @@ class TestDepartment:
             SELECT * FROM departments
         """
         row = CURSOR.execute(sql).fetchone()
-        department = Department.new_from_db(row)
+        department = Department.instance_from_db(row)
 
         assert ((row[0], row[1], row[2]) ==
                 (department.id, department.name, department.location) ==
