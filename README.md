@@ -481,14 +481,14 @@ class Department:
     def instance_from_db(cls, row):
         """Return a Department object having the attribute values from the table row."""
 
-        # Check the dictionary for an existing class instance using the row's primary key
+        # Check the dictionary for an existing instance using the row's primary key
         department = Department.all.get(row[0])
         if department:
             # ensure attributes match row values in case local object was modified
             department.name = row[1]
             department.location = row[2]
         else:
-            # not in dictionary, create new class instance and add to dictionary
+            # not in dictionary, create new instance and add to dictionary
             department = cls(row[1], row[2])
             department.id = row[0]
             Department.all[department.id] = department
