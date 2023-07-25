@@ -1,4 +1,5 @@
-from __init__ import CONN, CURSOR
+from __init__ import CURSOR, CONN
+
 class Department:
 
     def __init__(self, name, location, id=None):
@@ -70,4 +71,3 @@ class Department:
 
         CURSOR.execute(sql, (self.id,))
         CONN.commit()
-
