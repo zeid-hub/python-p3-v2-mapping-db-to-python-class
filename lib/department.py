@@ -1,3 +1,4 @@
+from __init__ import CONN, CURSOR
 class Department:
 
     def __init__(self, name, location, id=None):
@@ -46,7 +47,7 @@ class Department:
     @classmethod
     def create(cls, name, location):
         """ Initialize a new Department instance and save the object to the database """
-        department = Department(name, location)
+        department = cls(name, location)
         department.save()
         return department
 
