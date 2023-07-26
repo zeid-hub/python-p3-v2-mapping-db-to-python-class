@@ -1,5 +1,6 @@
 from __init__ import CURSOR, CONN
 
+
 class Department:
 
     def __init__(self, name, location, id=None):

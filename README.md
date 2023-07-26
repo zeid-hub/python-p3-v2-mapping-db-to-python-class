@@ -135,7 +135,9 @@ class Department:
 ```
 
 We'll also update the `save()` method to add the current `Department` instance
-to the dictionary, using the row's primary key as the dictionary key:
+to the dictionary, using the row's primary key as the dictionary key. This is
+done by adding the statement `type(self).all[self.id] = self` to the end of the
+method:
 
 ```py
     def save(self):
@@ -151,8 +153,10 @@ to the dictionary, using the row's primary key as the dictionary key:
         CONN.commit()
 
         self.id = CURSOR.lastrowid
-        Department.all[self.id] = self
+        type(self).all[self.id] = self
 ```
+
+NOTE: `type(self)` will evaluate to the `Department` class.
 
 Now we can implement the necessary methods for mapping table rows to Python
 objects.
@@ -181,7 +185,7 @@ Add the new class method `instance_from_db(cls, row)` to the `Department` class:
         """Return a Department object having the attribute values from the table row."""
 
         # Check the dictionary for an existing instance using the row's primary key
-        department = Department.all.get(row[0])
+        department = cls.all.get(row[0])
         if department:
             # ensure attributes match row values in case local object was modified
             department.name = row[1]
@@ -190,7 +194,7 @@ Add the new class method `instance_from_db(cls, row)` to the `Department` class:
             # not in dictionary, create new instance and add to dictionary
             department = cls(row[1], row[2])
             department.id = row[0]
-            Department.all[department.id] = department
+            cls.all[department.id] = department
         return department
 ```
 
@@ -363,6 +367,36 @@ ipdb> department
 
 ```
 
+## Update the `delete` method to remove the dictionary entry
+
+The `delete` method deletes the table row corresponding to the current
+Department instance. To ensure the Python object model reflects the table data,
+the `delete` method should also remove the corresponding key/value pair from the
+dictionary, and assign the instance `id` attribute back to `None`.
+
+Update the `delete` method as shown:
+
+```py
+def delete(self):
+        """Delete the table row corresponding to the current Department instance,
+        delete the dictionary entry, and reassign id attribute"""
+
+
+        sql = """
+            DELETE FROM departments
+            WHERE id = ?
+        """
+
+        CURSOR.execute(sql, (self.id,))
+        CONN.commit()
+
+        # Delete the dictionary entry using id as the key
+        del type(self).all[self.id]
+
+        # Set the id to None
+        self.id = None
+```
+
 Success!
 
 ### Testing the ORM
@@ -399,6 +433,8 @@ class instances.
 ## Solution Code
 
 ```py
+#lib/department.py
+
 from __init__ import CURSOR, CONN
 
 
@@ -449,12 +485,12 @@ class Department:
         CONN.commit()
 
         self.id = CURSOR.lastrowid
-        Department.all[self.id] = self
+        type(self).all[self.id] = self
 
     @classmethod
     def create(cls, name, location):
         """ Initialize a new Department instance and save the object to the database """
-        department = Department(name, location)
+        department = cls(name, location)
         department.save()
         return department
 
@@ -469,7 +505,10 @@ class Department:
         CONN.commit()
 
     def delete(self):
-        """Delete the table row corresponding to the current Department instance"""
+        """Delete the table row corresponding to the current Department instance,
+        delete the dictionary entry, and reassign id attribute"""
+
+
         sql = """
             DELETE FROM departments
             WHERE id = ?
@@ -478,12 +517,18 @@ class Department:
         CURSOR.execute(sql, (self.id,))
         CONN.commit()
 
+        # Delete the dictionary entry using id as the key
+        del type(self).all[self.id]
+
+        # Set the id to None
+        self.id = None
+
     @classmethod
     def instance_from_db(cls, row):
         """Return a Department object having the attribute values from the table row."""
 
         # Check the dictionary for an existing instance using the row's primary key
-        department = Department.all.get(row[0])
+        department = cls.all.get(row[0])
         if department:
             # ensure attributes match row values in case local object was modified
             department.name = row[1]
@@ -492,7 +537,7 @@ class Department:
             # not in dictionary, create new instance and add to dictionary
             department = cls(row[1], row[2])
             department.id = row[0]
-            Department.all[department.id] = department
+            cls.all[department.id] = department
         return department
 
     @classmethod
@@ -530,7 +575,6 @@ class Department:
 
         row = CURSOR.execute(sql, (name,)).fetchone()
         return cls.instance_from_db(row) if row else None
-
 
 ```
 
