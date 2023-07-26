@@ -363,6 +363,36 @@ ipdb> department
 
 ```
 
+## Update the `delete` method to remove the dictionary entry
+
+The `delete` method deletes the table row corresponding to the current
+Department instance. To ensure the Python object model reflects the table data,
+the `delete` method should also remove the corresponding key/value pair from the
+dictionary, and assign the instance `id` attribute back to `None`.
+
+Update the `delete` method as shown:
+
+```py
+def delete(self):
+        """Delete the table row corresponding to the current Department instance,
+        delete the dictionary entry, and reassign id attribute"""
+
+
+        sql = """
+            DELETE FROM departments
+            WHERE id = ?
+        """
+
+        CURSOR.execute(sql, (self.id,))
+        CONN.commit()
+
+        # Delete the dictionary entry using id as the key
+        del type(self).all[self.id]
+
+        # Set the id to None
+        self.id = None
+```
+
 Success!
 
 ### Testing the ORM
@@ -399,6 +429,8 @@ class instances.
 ## Solution Code
 
 ```py
+#lib/department.py
+
 from __init__ import CURSOR, CONN
 
 
@@ -469,7 +501,10 @@ class Department:
         CONN.commit()
 
     def delete(self):
-        """Delete the table row corresponding to the current Department instance"""
+        """Delete the table row corresponding to the current Department instance,
+        delete the dictionary entry, and reassign id attribute"""
+
+
         sql = """
             DELETE FROM departments
             WHERE id = ?
@@ -477,6 +512,12 @@ class Department:
 
         CURSOR.execute(sql, (self.id,))
         CONN.commit()
+
+        # Delete the dictionary entry using id as the key
+        del type(self).all[self.id]
+
+        # Set the id to None
+        self.id = None
 
     @classmethod
     def instance_from_db(cls, row):
