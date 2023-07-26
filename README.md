@@ -135,7 +135,9 @@ class Department:
 ```
 
 We'll also update the `save()` method to add the current `Department` instance
-to the dictionary, using the row's primary key as the dictionary key:
+to the dictionary, using the row's primary key as the dictionary key. This is
+done by adding the statement `type(self).all[self.id] = self` to the end of the
+method:
 
 ```py
     def save(self):
@@ -151,8 +153,10 @@ to the dictionary, using the row's primary key as the dictionary key:
         CONN.commit()
 
         self.id = CURSOR.lastrowid
-        Department.all[self.id] = self
+        type(self).all[self.id] = self
 ```
+
+NOTE: `type(self)` will evaluate to the `Department` class.
 
 Now we can implement the necessary methods for mapping table rows to Python
 objects.
@@ -181,7 +185,7 @@ Add the new class method `instance_from_db(cls, row)` to the `Department` class:
         """Return a Department object having the attribute values from the table row."""
 
         # Check the dictionary for an existing instance using the row's primary key
-        department = Department.all.get(row[0])
+        department = cls.all.get(row[0])
         if department:
             # ensure attributes match row values in case local object was modified
             department.name = row[1]
@@ -190,7 +194,7 @@ Add the new class method `instance_from_db(cls, row)` to the `Department` class:
             # not in dictionary, create new instance and add to dictionary
             department = cls(row[1], row[2])
             department.id = row[0]
-            Department.all[department.id] = department
+            cls.all[department.id] = department
         return department
 ```
 
@@ -481,7 +485,7 @@ class Department:
         CONN.commit()
 
         self.id = CURSOR.lastrowid
-        Department.all[self.id] = self
+        type(self).all[self.id] = self
 
     @classmethod
     def create(cls, name, location):
@@ -524,7 +528,7 @@ class Department:
         """Return a Department object having the attribute values from the table row."""
 
         # Check the dictionary for an existing instance using the row's primary key
-        department = Department.all.get(row[0])
+        department = cls.all.get(row[0])
         if department:
             # ensure attributes match row values in case local object was modified
             department.name = row[1]
@@ -533,7 +537,7 @@ class Department:
             # not in dictionary, create new instance and add to dictionary
             department = cls(row[1], row[2])
             department.id = row[0]
-            Department.all[department.id] = department
+            cls.all[department.id] = department
         return department
 
     @classmethod
@@ -571,7 +575,6 @@ class Department:
 
         row = CURSOR.execute(sql, (name,)).fetchone()
         return cls.instance_from_db(row) if row else None
-
 
 ```
 
